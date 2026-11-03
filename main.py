@@ -1,9 +1,19 @@
-from fastapi import FastAPI
-from routers import interview
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Smart Interview Simulator")
+from fastapi import FastAPI
+import models
+from db import init_db
+from routers import interview, stats
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+app = FastAPI(title="Smart Interview Simulator",lifespan=lifespan)
 
 app.include_router(interview.router)
+app.include_router(stats.router)
 
 @app.get("/health")
 def health():

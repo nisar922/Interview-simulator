@@ -1,22 +1,31 @@
 import json
-import asyncio
-from evaluator import evaluate_answer
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from questions import QUESTIONS
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from interviewer import generate_questions
+import asyncio
+from interviewer import generate_questions
+from jobs import enqueue_evaluation, get_result
 
 router = APIRouter()
+
+@router.get("/interviews/{interview_id}")
+async def interview_result(interview_id: str):
+    result = await get_result(interview_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    return result
 
 @router.websocket("/ws/interview")
 async def interview_ws(websocket: WebSocket):
     await websocket.accept()
     questions = []
     answers = []
+    role = " "
     try:
         while True:
             data = json.loads(await websocket.receive_text())
             if data["type"] == "start":
                 questions = await generate_questions(data["role"])
+                role = data["role"]
                 answers = []
                 if not questions:
                     await websocket.send_json(
@@ -39,20 +48,9 @@ async def interview_ws(websocket: WebSocket):
                         {"type": "question", "index": i, "text": questions[i]}
                     )
             else:
-                results = await asyncio.gather(
-                    *(evaluate_answer(q, a) for q, a in zip(questions, answers))
-                )
-                scores = [r["score"] for r in results if r["score"] is not None]
-                average = round(sum(scores) / len(scores), 1) if scores else None
+                interview_id = await enqueue_evaluation(questions, answers, role)
                 await websocket.send_json(
-                    {
-                        "type": "report",
-                        "average": average,
-                        "details": [
-                            {"question": q, "answer": a, **r}
-                           for q, a, r in zip(questions, answers, results)
-                        ],
-                   }
+                    {"type":"processing", "interview_id": interview_id}
                 )
 
     except WebSocketDisconnect:
