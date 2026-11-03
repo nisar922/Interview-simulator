@@ -4,6 +4,7 @@ x-app: &app
   environment:
     DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/interviews
     REDIS_URL: redis://redis:6379
+    MOCK_LLM: ${MOCK_LLM:-0}
   depends_on:
     redis:
       condition: service_healthy
