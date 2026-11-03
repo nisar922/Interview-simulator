@@ -4,6 +4,7 @@ from interviewer import generate_questions
 import asyncio
 from interviewer import generate_questions
 from jobs import enqueue_evaluation, get_result
+from resume_service import load_resume
 
 router = APIRouter()
 
@@ -24,7 +25,10 @@ async def interview_ws(websocket: WebSocket):
         while True:
             data = json.loads(await websocket.receive_text())
             if data["type"] == "start":
-                questions = await generate_questions(data["role"])
+                resume_text = None
+                if data.get("resume_id"):
+                    resume_text = await load_resume(data["resume_id"])
+                questions = await generate_questions(data["role"], resume=resume_text)
                 role = data["role"]
                 answers = []
                 if not questions:

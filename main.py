@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import models
 from db import init_db
-from routers import interview, stats
+from routers import interview, stats, resume
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,6 +14,8 @@ app = FastAPI(title="Smart Interview Simulator",lifespan=lifespan)
 
 app.include_router(interview.router)
 app.include_router(stats.router)
+app.include_router(resume.router)
+
 
 @app.get("/health")
 def health():
