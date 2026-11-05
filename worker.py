@@ -37,10 +37,12 @@ async def save_to_db(job: dict, report: dict):
 
 
 async def process(job: dict):
+    questions = job.get("questions", [])
+    answers = job.get("answers", job.get("answer", []))
     results = await asyncio.gather(
-        *(evaluate_answer(q, a) for q, a in zip(job["questions"], job["answers"]))
+        *(evaluate_answer(q, a) for q, a in zip(questions, answers))
     )
-    scores = [r["score"] for r in results if r["score"] is not None]
+    scores = [r["score"] for r in results if r.get("score") is not None]
     if not scores:
         raise RuntimeError("LLM unavailable, no scores")
     report = {
@@ -48,7 +50,7 @@ async def process(job: dict):
         "average": round(sum(scores) / len(scores), 1),
         "details": [
             {"question": q, "answer": a, **r}
-            for q, a, r in zip(job["questions"], job["answers"], results)
+            for q, a, r in zip(questions, answers, results)
         ],
     }
     await redis_client.set(
@@ -62,7 +64,7 @@ async def main():
         try:
             item = await redis_client.brpop(QUEUE, timeout=5)
         except (RedisTimeoutError, RedisConnectionError) as e:
-            print("Redis problem, retrying",e)
+            print("Redis problem, retrying", e)
             await asyncio.sleep(2)
             continue
 
@@ -74,7 +76,7 @@ async def main():
             await process(job)
             print("Done:", job["id"])
         except Exception as e:
-            job["attempts"] += 1
+            job["attempts"] = job.get("attempts", 0) + 1
             print(f"Failed ({job['attempts']}/{MAX_ATTEMPTS}):", e)
             if job["attempts"] < MAX_ATTEMPTS:
                 await asyncio.sleep(2 * job["attempts"])
@@ -85,4 +87,6 @@ async def main():
                     json.dumps({"status": "failed"}),
                     ex=RESULT_TTL,
                 )
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())

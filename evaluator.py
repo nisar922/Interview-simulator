@@ -1,4 +1,5 @@
 import json
+import re
 
 from llm import ask_llm
 
@@ -11,13 +12,29 @@ SYSTEM = (
 )
 
 def _clean(raw: str) -> str:
-    raw = raw.strip().removeprefix("```json").removeprefix("```")
-    return raw.removesuffix("```").strip()
+    raw = raw.strip()
+    if raw.startswith("```"):
+        first_newline = raw.find("\n")
+        if first_newline != -1:
+            raw = raw[first_newline + 1:]
+        else:
+            raw = raw.removeprefix("```")
+    if raw.endswith("```"):
+        raw = raw[:-3]
+    return raw.strip()
 
 async def evaluate_answer(question: str, answer: str) -> dict:
     prompt = f"Question: {question}\nCandidate answer: {answer}"
     try:
-        data = json.loads(_clean(await ask_llm(SYSTEM, prompt)))
+        cleaned = _clean(await ask_llm(SYSTEM, prompt))
+        try:
+            data = json.loads(cleaned)
+        except json.JSONDecodeError:
+            match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise
         score = max(0, min(10, int(data["score"])))
         return {
             "score": score,
