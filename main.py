@@ -4,6 +4,8 @@ from fastapi import FastAPI
 import models
 from db import init_db
 from routers import interview, stats, resume
+from pathlib import Path
+from fastapi.responses import FileResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,3 +25,9 @@ app.include_router(resume.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+@app.get("/")
+def index():
+    return FileResponse(STATIC_DIR / "index.html")
