@@ -1,14 +1,16 @@
 import asyncio
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile, Depends
 
 from resume_service import extract_text, save_resume
+
+from ratelimit import limit_by_ip
 
 router = APIRouter()
 
 MAX_BYTES = 2 * 1024 * 1024
 
-@router.post("/resume")
+@router.post("/resume", dependencies=[Depends(limit_by_ip("resume", 10, 3600))])
 async def upload_resume(file: UploadFile):
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files allowed")
