@@ -6,14 +6,19 @@ from db import init_db
 from routers import interview, stats, resume
 from pathlib import Path
 from fastapi.responses import FileResponse
+import asyncio
+import os
+from worker import run_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        await init_db()
-    except Exception as e:
-        print(f"Database init warning: {e}")
+    await init_db()
+    worker_task = None
+    if os.getenv("RUN_WORKER") == "1":
+        worker_task = asyncio.create_task(run_worker())
     yield
+    if worker_task:
+        worker_task.cancel()    
 
 app = FastAPI(title="Smart Interview Simulator", lifespan=lifespan)
 

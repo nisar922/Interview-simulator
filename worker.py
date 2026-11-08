@@ -58,7 +58,7 @@ async def process(job: dict):
     )
     await save_to_db(job, report)
 
-async def main():
+async def run_worker():
     print("Worker started, waiting for jobs...")
     while True:
         try:
@@ -89,4 +89,4 @@ async def main():
                 )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_worker())
