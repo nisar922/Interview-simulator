@@ -6,10 +6,10 @@ from groq import AsyncGroq
 
 load_dotenv()
 
-MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-MOCK_LLM = os.getenv("MOCK_LLM", "0").lower() in ("1", "true", "yes")
+MODEL = "openai/gpt-oss-20b"
+MOCK_LLM = os.getenv("MOCK_LLM") == "1"
 
-_client = None
+_client = AsyncGroq(api_key=os.environ["GROQ_API_KEY"], timeout=20.0, max_retries=1)
 
 def get_client() -> AsyncGroq:
     global _client
@@ -24,13 +24,11 @@ async def ask_llm(system: str, user: str) -> str:
         if "JSON array" in system:
             return '["Question one?", "Question two?", "Question three?"]'
         return '{"score": 7, "feedback": "mock feedback", "topic": "mock"}'
-    
-    client = get_client()
-    response = await client.chat.completions.create(
+    response = await _client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     )
-    return response.choices[0].message.content or ""
+    return response.choices[0].message.content 

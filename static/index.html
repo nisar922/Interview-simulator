@@ -5,179 +5,310 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Interview Simulator</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-  button, select, textarea { font-size: 1rem; padding: .5rem; margin: .25rem 0; }
-  textarea { width: 100%; box-sizing: border-box; min-height: 5rem; }
-  #question { font-size: 1.2rem; font-weight: 600; margin: 1rem 0; }
-  .hidden { display: none; }
-  .card { border: 1px solid #8884; border-radius: 8px; padding: .75rem; margin: .5rem 0; }
+  :root {
+    --bg: #f5f6fa; --card: #ffffff; --text: #1f2430; --muted: #6b7280;
+    --border: #e3e6ee; --primary: #4f46e5; --primary-text: #ffffff; --chip: #eef0ff;
+    --good: #15803d; --good-bg: #dcfce7; --mid: #b45309; --mid-bg: #fef3c7;
+    --bad: #b91c1c; --bad-bg: #fee2e2; --shadow: 0 4px 20px rgba(20, 24, 40, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1220; --card: #181c2f; --text: #e8eaf3; --muted: #9aa3b8;
+      --border: #2a3050; --primary: #7c83ff; --primary-text: #0f1220; --chip: #23284a;
+      --good: #4ade80; --good-bg: #12351f; --mid: #fbbf24; --mid-bg: #3a2d0e;
+      --bad: #f87171; --bad-bg: #3b1517; --shadow: 0 4px 20px rgba(0, 0, 0, .4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 { margin: 0 0 .25rem; font-size: 1.8rem; }
+  header p, .muted { margin: 0; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+          padding: 1.25rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
+  label.field { display: block; font-size: .85rem; color: var(--muted); margin: .75rem 0 .25rem; }
+  select, textarea, input[type=file] { width: 100%; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: .6rem .75rem; }
+  textarea { height: 9rem; resize: none; overflow-y: auto; }
+  button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--border);
+           background: var(--card); color: var(--text); padding: .65rem 1rem; }
+  button.primary { background: var(--primary); color: var(--primary-text);
+                   border-color: var(--primary); font-weight: 600; }
+  button.full { width: 100%; margin-top: 1rem; padding: .8rem; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; gap: .75rem; margin-top: .75rem; flex-wrap: wrap; }
+  .row button { flex: 1; }
+  .chip { display: inline-block; font-size: .75rem; font-weight: 600; letter-spacing: .04em;
+          text-transform: uppercase; color: var(--primary); background: var(--chip);
+          padding: .15rem .65rem; border-radius: 999px; }
+  #question { font-size: 1.25rem; font-weight: 600; margin: .6rem 0 1rem; }
+  #mic.recording { background: var(--bad-bg); color: var(--bad); border-color: var(--bad);
+                   animation: pulse 1.2s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .35); }
+    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+  }
+  #status { min-height: 1.5rem; text-align: center; color: var(--muted); margin: .5rem 0 1rem; }
+  #status.error { color: var(--bad); }
+  .summary { display: flex; align-items: center; gap: 1rem; }
+  .summary h2 { margin: 0 0 .15rem; }
+  .score-big { flex: none; width: 84px; height: 84px; border-radius: 50%; display: flex;
+               align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; }
+  .good { background: var(--good-bg); color: var(--good); }
+  .mid { background: var(--mid-bg); color: var(--mid); }
+  .bad { background: var(--bad-bg); color: var(--bad); }
+  .qa-head { display: flex; justify-content: space-between; gap: .75rem; align-items: flex-start; }
+  .qa h3 { margin: 0; font-size: 1rem; }
+  .pill { flex: none; padding: .1rem .65rem; border-radius: 999px; font-size: .85rem; font-weight: 700; }
+  .answer { color: var(--muted); margin: .5rem 0; }
+  .topic { font-size: .75rem; font-weight: 600; text-transform: uppercase; color: var(--primary);
+           background: var(--chip); padding: .1rem .5rem; border-radius: 6px; margin-right: .35rem; }
+  .bar-row { display: grid; grid-template-columns: 110px 1fr 36px; gap: .6rem;
+             align-items: center; margin: .4rem 0; font-size: .9rem; }
+  .bar { height: 10px; border-radius: 6px; background: var(--border); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--primary); }
+  footer { text-align: center; font-size: .8rem; color: var(--muted); margin-top: 2rem; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-<h1>Smart Interview Simulator</h1>
-
-<div id="setup">
-  <select id="role">
-    <option value="backend">Backend</option>
-    <option value="frontend">Frontend</option>
-    <option value="devops">DevOps</option>
-  </select><br>
-  <label>Resume (PDF, optional): <input type="file" id="resume" accept=".pdf"></label><br>
-  <button id="start">Start interview</button>
+<div class="wrap">
+  <header>
+    <h1>🎤 Smart Interview Simulator</h1>
+    <p>Practice with an AI interviewer. Answer by voice or text and get instant feedback.</p>
+  </header>
+  <div id="setup" class="card">
+    <label class="field" for="role">Choose a role</label>
+    <select id="role">
+      <option value="backend">Backend Developer</option>
+      <option value="frontend">Frontend Developer</option>
+      <option value="devops">DevOps Engineer</option>
+    </select>
+    <label class="field" for="resume">Resume (PDF, optional, used to tailor the questions)</label>
+    <input type="file" id="resume" accept=".pdf">
+    <button id="start" class="primary full">Start interview</button>
+  </div>
+  <div id="interview" class="card hidden">
+    <span class="chip" id="qnum">Question 1</span>
+    <div id="question"></div>
+    <textarea id="answer" placeholder="Speak with the mic or type your answer here"></textarea>
+    <div class="row">
+      <button id="mic">🎤 Speak</button>
+      <button id="send" class="primary">Send answer</button>
+    </div>
+  </div>
+  <div id="status"></div>
+  <div id="report"></div>
+  <div id="weak" class="card hidden"></div>
+  <footer>Voice answers are transcribed on the server. Your resume text is kept for 1 hour only.</footer>
 </div>
-
-
-<div id="interview" class="hidden">
-  <div id="question"></div>
-  <textarea id="answer" placeholder="Speak or type your answer"></textarea><br>
-  <button id="mic">🎤 Speak</button>
-  <button id="send">Send answer</button>
-</div>
-
-
-<div id="status"></div>
-<div id="report"></div>
-
 <script>
 const $ = (id) => document.getElementById(id);
-let ws, recorder, stream, chunks = [];
-
+let ws, recorder, stream, chunks = [], utter = null, starting = false;
 function esc(s) {
   const div = document.createElement("div");
   div.textContent = s;
   return div.innerHTML;
 }
-
-
-function speak(text, onEnd) {
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  u.onend = onEnd || null;
-  speechSynthesis.speak(u);
+function setStatus(text, isError = false) {
+  $("status").textContent = text;
+  $("status").className = isError ? "error" : "";
 }
-
+function cancelSpeech() {
+  if (utter) utter.onend = null;
+  speechSynthesis.cancel();
+}
+function speak(text, onEnd) {
+  cancelSpeech();
+  utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "en-US";
+  utter.onend = onEnd || null;
+  speechSynthesis.speak(utter);
+}
 function stopStream() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
   stream = null;
 }
-
-
-async function startRecording() {  if (recorder && recorder.state === "recording") return;
+function setMic(recording) {
+  $("mic").textContent = recording ? "⏹ Stop" : "🎤 Speak";
+  $("mic").classList.toggle("recording", recording);
+}
+async function startRecording() {
+  if (starting || (recorder && recorder.state === "recording")) return;
+  starting = true;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    $("status").textContent = "Mic error: " + e.name;
+    setStatus("Mic error: " + e.name, true);
     return;
+  } finally {
+    starting = false;
   }
   chunks = [];
   recorder = new MediaRecorder(stream);
   recorder.ondataavailable = (e) => chunks.push(e.data);
   recorder.onstop = () => {
     stopStream();
-    $("mic").textContent = "🎤 Speak";
+    setMic(false);
     if (!chunks.length) return;
-    $("status").textContent = "Transcribing...";
+    if (!ws || ws.readyState !== 1) {
+      setStatus("Connection lost. Please start again.", true);
+      return;
+    }
+    setStatus("Transcribing...");
     ws.send(new Blob(chunks, { type: recorder.mimeType }));
   };
   recorder.start();
-  $("mic").textContent = "⏹ Stop";
-  $("status").textContent = "Recording... click Stop when done";
+  setMic(true);
+  setStatus("Recording... click Stop when done");
 }
-
-
 function toggleMic() {
-  speechSynthesis.cancel();
+  cancelSpeech();
   if (recorder && recorder.state === "recording") recorder.stop();
   else startRecording();
 }
-
 function discardRecording() {
   if (recorder && recorder.state === "recording") {
     recorder.onstop = null;
     recorder.stop();
   }
   stopStream();
-  $("mic").textContent = "🎤 Speak";
+  setMic(false);
 }
-
-
 function handle(msg) {
   if (msg.type === "question") {
+    $("setup").classList.add("hidden");
+    $("interview").classList.remove("hidden");
+    $("qnum").textContent = "Question " + (msg.index + 1);
     $("question").textContent = msg.text;
     $("answer").value = "";
+    setStatus("");
     speak(msg.text, startRecording);
   } else if (msg.type === "transcript") {
-    $("answer").value = msg.text
-    $("status").textContent = "Edit if needed, then click Send answer.";
+    $("answer").value = msg.text;
+    setStatus("Edit if needed, then click Send answer.");
   } else if (msg.type === "processing") {
     $("interview").classList.add("hidden");
-    $("status").textContent = "Evaluating your answers...";
+    setStatus("Evaluating your answers... this takes a few seconds");
     pollResult(msg.interview_id);
   } else if (msg.type === "error") {
-    $("status").textContent = msg.message;
+    setStatus(msg.message, true);
+    $("start").disabled = false;
   }
 }
-
 async function pollResult(id) {
-  for (let i = 0; i < 60; i++) {
-    const data = await (await fetch(`/interviews/${id}`)).json();
-    if (data.status === "done") return showReport(data);
-    if (data.status === "failed") break;
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  $("status").textContent = "Evaluation failed or took too long.";
+  try {
+    for (let i = 0; i < 60; i++) {
+      const data = await (await fetch(`/interviews/${id}`)).json();
+      if (data.status === "done") return showReport(data);
+      if (data.status === "failed") break;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  } catch (e) { /* fall through to the message below */ }
+  setStatus("Evaluation failed or took too long. Please try again.", true);
   $("setup").classList.remove("hidden");
+  $("start").disabled = false;
 }
-
-
+function scoreClass(s) {
+  if (s === null || s === undefined) return "mid";
+  return s >= 7 ? "good" : s >= 4 ? "mid" : "bad";
+}
 function showReport(data) {
-  $("status").textContent = "";
+  setStatus("");
   $("setup").classList.remove("hidden");
+  $("start").disabled = false;
   const items = data.details.map((d) => `
-    <div class="card">
-      <b>${esc(d.question)}</b><br>
-      Your answer: ${esc(d.answer)}<br>
-      Score: ${d.score ?? "n/a"}/10 (${esc(d.topic)})<br>
-      ${esc(d.feedback)}
+    <div class="card qa">
+      <div class="qa-head">
+        <h3>${esc(d.question)}</h3>
+        <span class="pill ${scoreClass(d.score)}">${d.score ?? "n/a"}/10</span>
+      </div>
+      <p class="answer">${esc(d.answer)}</p>
+      <p style="margin:0"><span class="topic">${esc(d.topic)}</span>${esc(d.feedback)}</p>
     </div>`).join("");
-  $("report").innerHTML = `<h2>Average score: ${data.average}</h2>${items}`;
+  $("report").innerHTML = `
+    <div class="card summary">
+      <div class="score-big ${scoreClass(data.average)}">${data.average ?? "n/a"}</div>
+      <div>
+        <h2>Interview complete</h2>
+        <p class="muted">Average score out of 10. Review each answer below.</p>
+      </div>
+    </div>${items}`;
+  loadWeakAreas();
 }
-
+async function loadWeakAreas() {
+  try {
+    const rows = await (await fetch("/users/guest/weak-areas")).json();
+    if (!rows.length) return;
+    $("weak").innerHTML = `<h3 style="margin-top:0">Your weak areas (all interviews)</h3>` +
+      rows.slice(0, 6).map((r) => `
+        <div class="bar-row">
+          <span>${esc(r.topic)}</span>
+          <div class="bar"><span style="width:${r.avg_score * 10}%"></span></div>
+          <span>${r.avg_score}</span>
+        </div>`).join("");
+    $("weak").classList.remove("hidden");
+  } catch (e) { /* this section is optional */ }
+}
+// Buttons used during the interview are attached first
+$("mic").onclick = toggleMic;
+$("send").onclick = () => {
+  const text = $("answer").value.trim();
+  if (!text) {
+    setStatus("Please speak or type an answer first.", true);
+    return;
+  }
+  if (!ws || ws.readyState !== 1) {
+    setStatus("Connection lost. Please start again.", true);
+    return;
+  }
+  discardRecording();
+  cancelSpeech();
+  setStatus("");
+  ws.send(JSON.stringify({ type: "answer", text }));
+};
 $("start").onclick = async () => {
+  $("start").disabled = true;
+  setStatus("Starting...");
   let resumeId = null;
   const file = $("resume").files[0];
   if (file) {
+    setStatus("Reading your resume...");
     const form = new FormData();
     form.append("file", file);
     const res = await fetch("/resume", { method: "POST", body: form });
     if (!res.ok) {
-      $("status").textContent = "Resume error: " + (await res.json()).detail;
+      const err = await res.json().catch(() => ({}));
+      setStatus("Resume error: " + (err.detail || res.status), true);
+      $("start").disabled = false;
       return;
     }
     resumeId = (await res.json()).resume_id;
+  }
+  setStatus("Preparing your questions...");
+  $("report").innerHTML = "";
+  $("weak").classList.add("hidden");
+  if (ws) {
+    ws.onclose = null;
+    ws.close();
   }
   const proto = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${proto}://${location.host}/ws/interview`);
   ws.onopen = () =>
     ws.send(JSON.stringify({ type: "start", role: $("role").value, resume_id: resumeId }));
   ws.onmessage = (e) => handle(JSON.parse(e.data));
-  $("report").innerHTML = "";
-  $("setup").classList.add("hidden");
-  $("interview").classList.remove("hidden");
+  ws.onerror = () => {
+    setStatus("Could not connect to the server.", true);
+    $("start").disabled = false;
+  };
+  ws.onclose = () => {
+    if (!$("interview").classList.contains("hidden")) {
+      setStatus("Connection lost. Please start again.", true);
+    }
+  };
 };
-
-$("mic").onclick = toggleMic;
-
-
-$("send").onclick = () => {
-  const text = $("answer").value.trim();
-  if (!text) return;
-  discardRecording();
-  speechSynthesis.cancel();
-  ws.send(JSON.stringify({ type: "answer", text }));
-};
-
 </script>
 </body>
 </html>

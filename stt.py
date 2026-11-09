@@ -10,7 +10,7 @@ async def transcribe(audio: bytes) -> str:
         await asyncio.sleep(random.uniform(0.3, 0.8))
         return "this is a mock transcript."
     result = await _client.audio.transcriptions.create(
-        file=("answer.webm",audio),
+        file=("answer.webm",audio, "audio/webm"),
         model=STT_MODEL,
         language="en",
     )
